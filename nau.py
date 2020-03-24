@@ -157,7 +157,7 @@ class Reports:
 		return self.data_link.query("""
    			SELECT course_id, data, COUNT(user_id) AS test, SUM(passou) AS pass
 			FROM (
-				SELECT course_id, DATE_FORMAT(gpg.created, "%Y-%m-%d") AS data, user_id, if(gpg.percent_grade > 0,1,0) AS passou
+				SELECT course_id, DATE_FORMAT(gpg.course_edited_timestamp, "%Y-%m-%d") AS data, user_id, if(gpg.percent_grade > 0,1,0) AS passou
 				FROM grades_persistentcoursegrade gpg
 		    ) AS a
 			GROUP BY course_id, data
