@@ -1,0 +1,13 @@
+[general]
+debug = False
+
+[connection]
+debug = True
+host = localhost
+port = 3306
+user = user
+password = password
+database = edxapp
+
+[output]
+file = nau_reports.xlsx
