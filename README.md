@@ -13,7 +13,7 @@ file should never have the fields "auth_user.*" or "user_id" directly available.
 
 ### Activate virtual environment and install its dependencies
 ```bash
-virtualenv venv --python=python3.6
+virtualenv venv --python=python3
 source venv/bin/activate
 pip install -r requirements.txt --upgrade
 ```
