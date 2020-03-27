@@ -3,9 +3,8 @@ import xlsxwriter
 
 from nau import Reports
 
-debug = True
-nau_connection_settings = dict({"host":"localhost", "port":"3308", "user":"ruiribeiro", "password":"dr3Suqaceswl",
-							   "database":"edxapp"})
+debug = False
+nau_connection_settings = dict({"host":"localhost", "port":"3308", "user":"", "password":"","database":"edxapp"})
 
 
 def xlsx_worksheet(data, worksheet):
@@ -52,6 +51,9 @@ def main():
 	nau_connection_settings["user"] = config.get('connection', 'user')
 	nau_connection_settings["password"] = config.get('connection', 'password')
 	
+	if debug:
+		print("Connection Settings: ", nau_connection_settings)
+	
 	nau_reports = Reports(nau_connection_settings)
 	
 	xlsx_export_queries([
@@ -75,8 +77,17 @@ def main():
 		
 		("Enrollment", nau_reports.student_enrolled_by_course_by_date()),
 		("Students Passed", nau_reports.student_passed_by_date()		),
-		("Blocks Completed", nau_reports.completed_blocks_by_date())
+		("Blocks Completed", nau_reports.completed_blocks_by_date()),
 		
+		# Usage - History
+		
+		("Last Login by Day", nau_reports.last_login_by_day()),
+		("Distinct Users by Day", nau_reports.block_access_distinct_user_per_day()),
+		("Distinct Users by Month", nau_reports.block_access_distinct_user_per_month()),
+		
+		# Final Summary
+		
+		("Final Summary", nau_reports.final_summary()),
 	],
 	config.get('output', 'file'))
 

@@ -51,7 +51,7 @@ class Reports:
 	
 	def summary(self):
 		return [dict({
-			"Version": "v1",
+			"Version": "v2",
 			"DataBase": (self.data_link.settings["host"] + ":" + self.data_link.settings["port"]),
 			"Date": datetime.now(),
 			"Organizations": self.data_link.get("SELECT count(*) FROM organizations_organization"),
@@ -73,6 +73,13 @@ class Reports:
 			"New Enrollments - 30 days": self.data_link.get("SELECT count(*) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 30 DAY"),
 			"News Certificates - 30 days": self.data_link.get("SELECT count(*) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 30 DAY"),
 		})]
+
+	def final_summary(self):
+		return [dict({
+			"Version": "v2",
+			"DataBase": (self.data_link.settings["host"] + ":" + self.data_link.settings["port"]),
+			"Date": datetime.now(),
+		})]
 	
 	def organizations(self):
 		return self.data_link.query("SELECT * FROM organizations_organization")
@@ -91,9 +98,9 @@ class Reports:
 	
 	def certificates_by_date(self):
 		return self.data_link.query("""
-		  SELECT DATE_FORMAT(cgc.created_date, "%Y-%m-%d") AS date, COUNT(*) AS cnt
+		  SELECT cgc.course_id, DATE_FORMAT(cgc.created_date, "%Y-%m-%d") AS date, COUNT(*) AS cnt
 		  FROM certificates_generatedcertificate cgc
-		  GROUP	BY date
+		  GROUP	BY cgc.course_id, date
 		  """)
 	
 	def current_enrollment_distribution(self):
@@ -132,6 +139,16 @@ class Reports:
 		
 		return response
 
+	def last_login_by_day(self):
+		return self.data_link.query("""
+			SELECT
+				date_format(last_login, "%Y-%m-%d") as registo,
+				COUNT(*) AS last_logins
+			FROM
+				auth_user au
+			GROUP BY registo
+			""")
+
 	def studentmodule_history(self):
 		return self.data_link.query("""
    			SELECT DATE_FORMAT(csm.created, "%Y-%m-%d") data, COUNT(csm.id) cnt
@@ -168,6 +185,20 @@ class Reports:
    			SELECT course_key, block_type, date_format(cbc.created, "%Y-%m-%d") as date, COUNT(user_id) as users
 			FROM completion_blockcompletion cbc
 			GROUP BY course_key, block_type, date
+		""")
+		
+	def block_access_distinct_user_per_day(self):  #
+		return self.data_link.query("""
+	 		SELECT DATE_FORMAT(created, "%Y-%m-%d") date, COUNT(distinct user_id)
+			FROM completion_blockcompletion cbc
+			GROUP BY date
+		""")
+	
+	def block_access_distinct_user_per_month(self):  #
+		return self.data_link.query("""
+	 		SELECT DATE_FORMAT(created, "%Y-%m") date, COUNT(distinct user_id)
+			FROM completion_blockcompletion cbc
+			GROUP BY date
 		""")
 	
 	def course_metrics(self, course):
