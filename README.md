@@ -15,7 +15,20 @@ file should never have the fields "auth_user.*" or "user_id" directly available.
  - Set the "config.ini" file based on the "config.init.sample".
  - Execute "report.py"
 
-```
- # python.py report.py
+### Activate virtual environment and install its dependencies
+```bash
+virtualenv venv --python=python3
+source venv/bin/activate
+pip install -r requirements.txt --upgrade
 ```
 
+### Set the "config.ini" file based on the "config.init.sample".
+```bash
+cp config.init.sample config.ini
+vi config.ini
+```
+
+### Execute "report.py"
+```bash
+python report.py
+```
