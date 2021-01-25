@@ -1,0 +1,6 @@
+version: '2'
+
+services:
+  databaseexporter:
+    build: .
+    container_name: nau-database-exporter
