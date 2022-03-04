@@ -2,13 +2,11 @@
 Script that exports to a single xlsx file all the data relevant to be sent to Google Cloud.
 """
 import configparser
-import xlsxwriter
 import datetime
 
-from nau import Reports
+import xlsxwriter
 
-# debug = False
-# nau_connection_settings = dict({"host":"localhost", "port":"3308", "user":"", "password":"","database":"edxapp"})
+from nau import Reports
 
 
 def xlsx_worksheet(data, worksheet):
@@ -32,8 +30,12 @@ def xlsx_worksheet(data, worksheet):
 		row += 1
 
 
-def xlsx_export_queries(progress, queries, file_name):
-	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': 'yyyy-mm-dd'})
+def xlsx_export_queries(config : configparser.ConfigParser, queries):
+	file_name : str = config.get('xlsx', 'file', fallback='report.xlsx')
+	default_date_format : str = config.get('xlsx', 'default_date_format', fallback='yyyy-mm-dd')
+	progress : bool = config.get('xlsx', 'progress', fallback=True)
+	
+	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': default_date_format})
 	
 	for name, query_result in queries:
 		if progress: 
@@ -45,27 +47,24 @@ def xlsx_export_queries(progress, queries, file_name):
 
 
 def main():
-	
-	# global debug
-	#global nau_connection_settings
-	
 	config = configparser.ConfigParser()
 	config.read('config.ini')
 	
-	debug = config.get('general', 'debug')
-	nau_connection_settings={}
-	nau_connection_settings["host"] = config.get('connection', 'host')
-	nau_connection_settings["port"] = config.get('connection', 'port')
-	nau_connection_settings["database"] = config.get('connection', 'database')
-	nau_connection_settings["user"] = config.get('connection', 'user')
+	nau_connection_settings : dict = {}
+	nau_connection_settings["host"] = config.get('connection', 'host', fallback='localhost')
+	nau_connection_settings["port"] = config.get('connection', 'port', fallback='3306')
+	nau_connection_settings["database"] = config.get('connection', 'database', fallback='edxapp')
+	nau_connection_settings["user"] = config.get('connection', 'user', fallback='edxapp')
 	nau_connection_settings["password"] = config.get('connection', 'password')
 	
+	debug : bool = config.get('connection', 'debug', fallback=False)
 	if debug:
 		print("Connection Settings: ", nau_connection_settings)
 	
 	nau_reports = Reports(nau_connection_settings)
 	
-	xlsx_export_queries(debug, [
+	xlsx_export_queries(config, [
+		("Summary", nau_reports.summary()),
 		
 		# Global - Now
 		
@@ -96,8 +95,7 @@ def main():
 		# Final Summary
 		
 		("Final Summary", nau_reports.final_summary()),
-	],
-	config.get('output', 'file'))
+	])
 
 
 if __name__ == "__main__":
