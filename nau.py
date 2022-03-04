@@ -64,7 +64,7 @@ class Reports:
 			"New Users - 7 days": self.data_link.get("SELECT count(1) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 7 DAY"),
 			"New Enrollments - 7 days": self.data_link.get("SELECT count(1) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 7 DAY"),
 			"News Certificates - 7 days": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 7 DAY"),
-			# 15 Dayus
+			# 15 Days
 			"New Users - 15 days": self.data_link.get("SELECT count(1) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 15 DAY"),
 			"New Enrollments - 15 days": self.data_link.get("SELECT count(1) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 15 DAY"),
 			"News Certificates - 15 days": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 15 DAY"),
@@ -87,23 +87,42 @@ class Reports:
 	
 	def courses(self):
 		# TODO: replace all the column names with just sufficient columns
-		return self.data_link.query("SELECT created, modified, version, id, _location, display_name, display_number_with_default, display_org_with_default, start, end, advertised_start, course_image_url, social_sharing_url, end_of_course_survey_url, certificates_display_behavior, certificates_show_before_end, cert_html_view_enabled, has_any_active_web_certificate, cert_name_short, cert_name_long, lowest_passing_grade, days_early_for_beta, mobile_available, visible_to_staff_only, _pre_requisite_courses_json, enrollment_start, enrollment_end, enrollment_domain, invitation_only, max_student_enrollments_allowed, announcement, catalog_visibility, course_video_url, effort, short_description, org, self_paced, marketing_url, eligible_for_financial_aid, language, certificate_available_date, end_date, start_date FROM course_overviews_courseoverview")
+		return self.data_link.query("""
+			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(id, '+', -1) as edition_code,
+				created, modified, version, id, _location, display_name, display_number_with_default, display_org_with_default, start, end, advertised_start, course_image_url, social_sharing_url, end_of_course_survey_url, certificates_display_behavior, certificates_show_before_end, cert_html_view_enabled, has_any_active_web_certificate, cert_name_short, cert_name_long, lowest_passing_grade, days_early_for_beta, mobile_available, visible_to_staff_only, _pre_requisite_courses_json, enrollment_start, enrollment_end, enrollment_domain, invitation_only, max_student_enrollments_allowed, announcement, catalog_visibility, course_video_url, effort, short_description, org, self_paced, marketing_url, eligible_for_financial_aid, language, certificate_available_date, end_date, start_date FROM course_overviews_courseoverview
+		""")
 	
 	def overall_course_metrics(self):
 		return self.data_link.query("""
-			SELECT coc.id, coc.display_name, coc.display_org_with_default,
-			   (select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled,
-			   (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates,
-			   (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade
+			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(coc.id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(coc.id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(coc.id, '+', -1) as edition_code,
+				coc.id,
+				coc.display_name,
+				coc.display_org_with_default,
+			    (select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled,
+			    (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates,
+			    (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade
 			FROM course_overviews_courseoverview coc
 		""")
 	
 	def certificates_by_date(self):
 		return self.data_link.query("""
-		  SELECT cgc.course_id, DATE_FORMAT(cgc.created_date, "%Y-%m-%d") AS date, count(1) AS cnt
-		  FROM certificates_generatedcertificate cgc
-		  GROUP	BY cgc.course_id, date
-		  """)
+			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+				course_id, 
+				DATE_FORMAT(created_date, "%Y-%m-%d") AS date, 
+				count(1) AS cnt
+			FROM certificates_generatedcertificate
+			GROUP BY course_id, date
+			"""
+		)
 	
 	def current_enrollment_distribution(self):
 		return self.data_link.query("""
@@ -160,21 +179,39 @@ class Reports:
 		
 	def courseenrollment_allowed(self):
 		return self.data_link.query("""
-   			SELECT course_id, count(1) as students
+   			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+			    course_id,
+			    count(1) as students
 			FROM student_courseenrollmentallowed scea
 			GROUP BY course_id
 		""")
 		
 	def student_enrolled_by_course_by_date(self): #
 		return self.data_link.query("""
-   			SELECT  course_id, DATE_FORMAT(sce.created, "%Y-%m-%d") date, count(sce.user_id) as students
+   			SELECT 
+			    SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+				course_id, 
+				DATE_FORMAT(sce.created, "%Y-%m-%d") date, 
+				count(sce.user_id) as students
 			FROM student_courseenrollment sce
 			GROUP BY course_id, date
 		""")
 
 	def student_passed_by_date(self): #
 		return self.data_link.query("""
-   			SELECT course_id, date, COUNT(user_id) AS test, SUM(passou) AS pass
+   			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+			    course_id, 
+				date, 
+				COUNT(user_id) AS test, 
+				SUM(passou) AS pass
 			FROM (
 				SELECT course_id, DATE_FORMAT(gpg.course_edited_timestamp, "%Y-%m-%d") AS date, user_id, if(gpg.percent_grade > 0,1,0) AS passou
 				FROM grades_persistentcoursegrade gpg
@@ -184,7 +221,14 @@ class Reports:
 
 	def completed_blocks_by_date(self): #
 		return self.data_link.query("""
-   			SELECT course_key, block_type, date_format(cbc.created, "%Y-%m-%d") as date, COUNT(user_id) as users
+   			SELECT 
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_key, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_key, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_key, '+', -1) as edition_code,
+			    course_key,
+				block_type,
+				date_format(cbc.created, "%Y-%m-%d") as date,
+				COUNT(user_id) as users
 			FROM completion_blockcompletion cbc
 			GROUP BY course_key, block_type, date
 		""")
