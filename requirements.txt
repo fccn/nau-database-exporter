@@ -3,3 +3,4 @@ mysql-connector-python==8.0.28
 protobuf==3.19.4
 six==1.16.0
 XlsxWriter==3.0.3
+gspread==5.2.0

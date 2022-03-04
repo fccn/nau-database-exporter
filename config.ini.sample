@@ -1,6 +1,3 @@
-[general]
-debug = False
-
 [connection]
 debug = True
 host = localhost
@@ -9,5 +6,24 @@ user = user
 password = password
 database = edxapp
 
-[output]
+[google_service_account]
+type = service_account
+project_id = project_id
+private_key_id = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+private_key = 
+    -----BEGIN PRIVATE KEY-----
+    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+    ...
+    -----END PRIVATE KEY-----
+client_email = xxxx@yyyy.iam.gserviceaccount.com
+client_id = 111111111111111111111
+auth_uri = https://accounts.google.com/o/oauth2/auth
+token_uri = https://oauth2.googleapis.com/token
+auth_provider_x509_cert_url = https://www.googleapis.com/oauth2/v1/certs
+client_x509_cert_url = https://www.googleapis.com/robot/v1/metadata/x509/xxxxxxxxxxxxxxx%40yyyyyyyyyyyyy.iam.gserviceaccount.com
+
+[xlsx]
 file = nau_reports.xlsx
+default_date_format = yyyy-mm-dd
+progress = True
