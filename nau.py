@@ -82,10 +82,12 @@ class Reports:
 		})]
 	
 	def organizations(self):
-		return self.data_link.query("SELECT * FROM organizations_organization")
+		# TODO: replace all the column names with just sufficient columns
+		return self.data_link.query("SELECT id, created, modified, name, short_name, description, logo, active FROM organizations_organization")
 	
 	def courses(self):
-		return self.data_link.query("SELECT * FROM course_overviews_courseoverview")
+		# TODO: replace all the column names with just sufficient columns
+		return self.data_link.query("SELECT created, modified, version, id, _location, display_name, display_number_with_default, display_org_with_default, start, end, advertised_start, course_image_url, social_sharing_url, end_of_course_survey_url, certificates_display_behavior, certificates_show_before_end, cert_html_view_enabled, has_any_active_web_certificate, cert_name_short, cert_name_long, lowest_passing_grade, days_early_for_beta, mobile_available, visible_to_staff_only, _pre_requisite_courses_json, enrollment_start, enrollment_end, enrollment_domain, invitation_only, max_student_enrollments_allowed, announcement, catalog_visibility, course_video_url, effort, short_description, org, self_paced, marketing_url, eligible_for_financial_aid, language, certificate_available_date, end_date, start_date FROM course_overviews_courseoverview")
 	
 	def overall_course_metrics(self):
 		return self.data_link.query("""
