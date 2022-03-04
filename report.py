@@ -3,11 +3,12 @@ Script that exports to a single xlsx file all the data relevant to be sent to Go
 """
 import configparser
 import xlsxwriter
+import datetime
 
 from nau import Reports
 
-debug = False
-nau_connection_settings = dict({"host":"localhost", "port":"3308", "user":"", "password":"","database":"edxapp"})
+# debug = False
+# nau_connection_settings = dict({"host":"localhost", "port":"3308", "user":"", "password":"","database":"edxapp"})
 
 
 def xlsx_worksheet(data, worksheet):
@@ -23,16 +24,20 @@ def xlsx_worksheet(data, worksheet):
 	for line in data:
 		col = 0
 		for value in line.values():
-			worksheet.write(row, col, value)
+			if isinstance(value, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta)):
+				worksheet.write_datetime(row, col, value)
+			else:
+				worksheet.write(row, col, value)
 			col += 1
 		row += 1
 
 
-def xlsx_export_queries(queries, file_name):
-	workbook = xlsxwriter.Workbook(file_name)
+def xlsx_export_queries(progress, queries, file_name):
+	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': 'yyyy-mm-dd'})
 	
 	for name, query_result in queries:
-		if debug: print("Producing... " + name)
+		if progress: 
+			print("Producing... " + name)
 		worksheet = workbook.add_worksheet(name)
 		xlsx_worksheet(query_result, worksheet)
 	
@@ -41,13 +46,14 @@ def xlsx_export_queries(queries, file_name):
 
 def main():
 	
-	global debug
-	global nau_connection_settings
+	# global debug
+	#global nau_connection_settings
 	
 	config = configparser.ConfigParser()
 	config.read('config.ini')
 	
 	debug = config.get('general', 'debug')
+	nau_connection_settings={}
 	nau_connection_settings["host"] = config.get('connection', 'host')
 	nau_connection_settings["port"] = config.get('connection', 'port')
 	nau_connection_settings["database"] = config.get('connection', 'database')
@@ -59,8 +65,7 @@ def main():
 	
 	nau_reports = Reports(nau_connection_settings)
 	
-	xlsx_export_queries([
-		("Summary", nau_reports.summary()),
+	xlsx_export_queries(debug, [
 		
 		# Global - Now
 		
