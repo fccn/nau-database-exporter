@@ -121,12 +121,12 @@ class Reports:
 	def global_enrollment_history(self):
 		response = self.data_link.query("""
 			SELECT
-				date_format(date_joined, "%Y-%m-%d") as registo,
+				date_format(date_joined, "%Y-%m-%d") as register_date,
 				count(1) AS cnt,
 				SUM(is_active) AS active
 			FROM
 				auth_user au
-			GROUP BY registo
+			GROUP BY register_date
 			""")
 		
 		cnt_registered = 0
@@ -142,18 +142,18 @@ class Reports:
 	def last_login_by_day(self):
 		return self.data_link.query("""
 			SELECT
-				date_format(last_login, "%Y-%m-%d") as registo,
+				date_format(last_login, "%Y-%m-%d") as last_login_date,
 				count(1) AS last_logins
 			FROM
 				auth_user au
-			GROUP BY registo
+			GROUP BY last_login_date
 			""")
 
 	def studentmodule_history(self):
 		return self.data_link.query("""
-   			SELECT DATE_FORMAT(csm.created, "%Y-%m-%d") data, COUNT(csm.id) cnt
+   			SELECT DATE_FORMAT(csm.created, "%Y-%m-%d") date, COUNT(csm.id) cnt
 			FROM courseware_studentmodule csm
-			GROUP BY data
+			GROUP BY date
 		""")
 		
 	def courseenrollment_allowed(self):
@@ -165,19 +165,19 @@ class Reports:
 		
 	def student_enrolled_by_course_by_date(self): #
 		return self.data_link.query("""
-   			SELECT  course_id, DATE_FORMAT(sce.created, "%Y-%m-%d") data, count(sce.user_id) as students
+   			SELECT  course_id, DATE_FORMAT(sce.created, "%Y-%m-%d") date, count(sce.user_id) as students
 			FROM student_courseenrollment sce
-			GROUP BY course_id, data
+			GROUP BY course_id, date
 		""")
 
 	def student_passed_by_date(self): #
 		return self.data_link.query("""
-   			SELECT course_id, data, COUNT(user_id) AS test, SUM(passou) AS pass
+   			SELECT course_id, date, COUNT(user_id) AS test, SUM(passou) AS pass
 			FROM (
-				SELECT course_id, DATE_FORMAT(gpg.course_edited_timestamp, "%Y-%m-%d") AS data, user_id, if(gpg.percent_grade > 0,1,0) AS passou
+				SELECT course_id, DATE_FORMAT(gpg.course_edited_timestamp, "%Y-%m-%d") AS date, user_id, if(gpg.percent_grade > 0,1,0) AS passou
 				FROM grades_persistentcoursegrade gpg
 		    ) AS a
-			GROUP BY course_id, data
+			GROUP BY course_id, date
 		""")
 
 	def completed_blocks_by_date(self): #
@@ -204,8 +204,8 @@ class Reports:
 	def course_metrics(self, course):
 		return self.data_link.query("""
 			select coc.id as id,
-			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
-  			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
+			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrollments,
+  			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates
 	    	from course_overviews_courseoverview coc
 	    	where id = '{course_id}'
 		""".format(course_id=course["id"]))[0]
@@ -213,8 +213,8 @@ class Reports:
 	def invoice_data(self, course):
 		return self.data_link.query("""
 			select coc.id as id, coc.*,
-			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
-			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
+			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrollments,
+			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates
 			from course_overviews_courseoverview coc
 			where id = '{course_id}'
 		""".format(course_id=course["id"]))[0]
