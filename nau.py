@@ -54,24 +54,24 @@ class Reports:
 			"Version": "v2",
 			"DataBase": (self.data_link.settings["host"] + ":" + self.data_link.settings["port"]),
 			"Date": datetime.now(),
-			"Organizations": self.data_link.get("SELECT count(*) FROM organizations_organization"),
+			"Organizations": self.data_link.get("SELECT count(1) FROM organizations_organization"),
 			# Global
-			"Courses": self.data_link.get("SELECT count(*) FROM course_overviews_courseoverview"),
-			"Users": self.data_link.get("SELECT count(*) FROM auth_user"),
-			"Enrollments": self.data_link.get("SELECT count(*) FROM student_courseenrollment"),
-			"Certificates": self.data_link.get("SELECT count(*) FROM certificates_generatedcertificate"),
+			"Courses": self.data_link.get("SELECT count(1) FROM course_overviews_courseoverview"),
+			"Users": self.data_link.get("SELECT count(1) FROM auth_user"),
+			"Enrollments": self.data_link.get("SELECT count(1) FROM student_courseenrollment"),
+			"Certificates": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate"),
 			# 7 Days
-			"New Users - 7 days": self.data_link.get("SELECT count(*) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 7 DAY"),
-			"New Enrollments - 7 days": self.data_link.get("SELECT count(*) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 7 DAY"),
-			"News Certificates - 7 days": self.data_link.get("SELECT count(*) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 7 DAY"),
+			"New Users - 7 days": self.data_link.get("SELECT count(1) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 7 DAY"),
+			"New Enrollments - 7 days": self.data_link.get("SELECT count(1) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 7 DAY"),
+			"News Certificates - 7 days": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 7 DAY"),
 			# 15 Dayus
-			"New Users - 15 days": self.data_link.get("SELECT count(*) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 15 DAY"),
-			"New Enrollments - 15 days": self.data_link.get("SELECT count(*) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 15 DAY"),
-			"News Certificates - 15 days": self.data_link.get("SELECT count(*) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 15 DAY"),
+			"New Users - 15 days": self.data_link.get("SELECT count(1) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 15 DAY"),
+			"New Enrollments - 15 days": self.data_link.get("SELECT count(1) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 15 DAY"),
+			"News Certificates - 15 days": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 15 DAY"),
 			# 30 Days
-			"New Users - 30 days": self.data_link.get("SELECT count(*) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 30 DAY"),
-			"New Enrollments - 30 days": self.data_link.get("SELECT count(*) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 30 DAY"),
-			"News Certificates - 30 days": self.data_link.get("SELECT count(*) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 30 DAY"),
+			"New Users - 30 days": self.data_link.get("SELECT count(1) FROM auth_user au WHERE au.date_joined > NOW() - INTERVAL 30 DAY"),
+			"New Enrollments - 30 days": self.data_link.get("SELECT count(1) FROM student_courseenrollment sce WHERE sce.created > NOW() - INTERVAL 30 DAY"),
+			"News Certificates - 30 days": self.data_link.get("SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.created_date > NOW() - INTERVAL 30 DAY"),
 		})]
 
 	def final_summary(self):
@@ -90,15 +90,15 @@ class Reports:
 	def overall_course_metrics(self):
 		return self.data_link.query("""
 			SELECT coc.id, coc.display_name, coc.display_org_with_default,
-			   (select COUNT(*) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled,
-			   (select COUNT(*) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates,
+			   (select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled,
+			   (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates,
 			   (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade
 			FROM course_overviews_courseoverview coc
 		""")
 	
 	def certificates_by_date(self):
 		return self.data_link.query("""
-		  SELECT cgc.course_id, DATE_FORMAT(cgc.created_date, "%Y-%m-%d") AS date, COUNT(*) AS cnt
+		  SELECT cgc.course_id, DATE_FORMAT(cgc.created_date, "%Y-%m-%d") AS date, count(1) AS cnt
 		  FROM certificates_generatedcertificate cgc
 		  GROUP	BY cgc.course_id, date
 		  """)
@@ -106,7 +106,7 @@ class Reports:
 	def current_enrollment_distribution(self):
 		return self.data_link.query("""
 			SELECT
-				sce.user_id as user, COUNT(*) as cnt
+				sce.user_id as user, count(1) as cnt
 			FROM
 				auth_user au,
 				student_courseenrollment sce
@@ -122,7 +122,7 @@ class Reports:
 		response = self.data_link.query("""
 			SELECT
 				date_format(date_joined, "%Y-%m-%d") as registo,
-				COUNT(*) AS cnt,
+				count(1) AS cnt,
 				SUM(is_active) AS active
 			FROM
 				auth_user au
@@ -143,7 +143,7 @@ class Reports:
 		return self.data_link.query("""
 			SELECT
 				date_format(last_login, "%Y-%m-%d") as registo,
-				COUNT(*) AS last_logins
+				count(1) AS last_logins
 			FROM
 				auth_user au
 			GROUP BY registo
@@ -158,7 +158,7 @@ class Reports:
 		
 	def courseenrollment_allowed(self):
 		return self.data_link.query("""
-   			SELECT course_id, COUNT(*) as students
+   			SELECT course_id, count(1) as students
 			FROM student_courseenrollmentallowed scea
 			GROUP BY course_id
 		""")
@@ -204,8 +204,8 @@ class Reports:
 	def course_metrics(self, course):
 		return self.data_link.query("""
 			select coc.id as id,
-			(SELECT COUNT(*) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
-  			(SELECT COUNT(*) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
+			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
+  			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
 	    	from course_overviews_courseoverview coc
 	    	where id = '{course_id}'
 		""".format(course_id=course["id"]))[0]
@@ -213,8 +213,8 @@ class Reports:
 	def invoice_data(self, course):
 		return self.data_link.query("""
 			select coc.id as id, coc.*,
-			(SELECT COUNT(*) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
-			(SELECT COUNT(*) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
+			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS inscritos,
+			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificados
 			from course_overviews_courseoverview coc
 			where id = '{course_id}'
 		""".format(course_id=course["id"]))[0]
