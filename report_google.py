@@ -8,6 +8,7 @@ import datetime
 from gspread.spreadsheet import Spreadsheet
 from gspread.exceptions import WorksheetNotFound
 from gspread.worksheet import Worksheet
+from gspread.utils import ValueInputOption
 
 from nau import Reports
 
@@ -38,7 +39,7 @@ def write_data(data: dict, worksheet: Worksheet):
 		new_line = transform_values(line.values())
 		alter_data.append(new_line)
 	
-	worksheet.update(alter_data)
+	worksheet.update(alter_data, value_input_option=ValueInputOption.user_entered)
 
 
 def export_queries_to_google(config : configparser.ConfigParser, queries):
