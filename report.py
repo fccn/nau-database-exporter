@@ -1,3 +1,6 @@
+"""
+Script that exports to a single xlsx file all the data relevant to be sent to Google Cloud.
+"""
 import configparser
 import xlsxwriter
 
