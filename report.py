@@ -49,53 +49,8 @@ def xlsx_export_queries(config : configparser.ConfigParser, queries):
 def main():
 	config = configparser.ConfigParser()
 	config.read('config.ini')
-	
-	nau_connection_settings : dict = {}
-	nau_connection_settings["host"] = config.get('connection', 'host', fallback='localhost')
-	nau_connection_settings["port"] = config.get('connection', 'port', fallback='3306')
-	nau_connection_settings["database"] = config.get('connection', 'database', fallback='edxapp')
-	nau_connection_settings["user"] = config.get('connection', 'user', fallback='edxapp')
-	nau_connection_settings["password"] = config.get('connection', 'password')
-	
-	debug : bool = config.get('connection', 'debug', fallback=False)
-	if debug:
-		print("Connection Settings: ", nau_connection_settings)
-	
-	nau_reports = Reports(nau_connection_settings)
-	
-	xlsx_export_queries(config, [
-		("Summary", nau_reports.summary()),
-		
-		# Global - Now
-		
-		("Organizations", nau_reports.organizations()),
-		("Courses", nau_reports.courses()),
-		
-		# Global - History
-		
-		("Users", nau_reports.global_enrollment_history()),
-		("Certificates", nau_reports.certificates_by_date()),
-		
-		# Per Course - Now
-		
-		("Course Metrics", nau_reports.overall_course_metrics()),
-		
-		# Per Course - History
-		
-		("Enrollment", nau_reports.student_enrolled_by_course_by_date()),
-		("Students Passed", nau_reports.student_passed_by_date()		),
-		("Blocks Completed", nau_reports.completed_blocks_by_date()),
-		
-		# Usage - History
-		
-		("Last Login by Day", nau_reports.last_login_by_day()),
-		("Distinct Users by Day", nau_reports.block_access_distinct_user_per_day()),
-		("Distinct Users by Month", nau_reports.block_access_distinct_user_per_month()),
-		
-		# Final Summary
-		
-		("Final Summary", nau_reports.final_summary()),
-	])
+	nau_reports = Reports(config)
+	xlsx_export_queries(config, nau_reports.sheets_data())
 
 
 if __name__ == "__main__":

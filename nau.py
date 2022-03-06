@@ -1,6 +1,6 @@
 from datetime import datetime
 import mysql.connector
-
+import configparser
 
 class DataLink:
 	connection = None
@@ -45,10 +45,97 @@ class DataLink:
 
 class Reports:
 	data_link = None
+	config : configparser.ConfigParser = None
 	
-	def __init__(self, settings):
+	def __init__(self, config: configparser.ConfigParser):
+		settings : dict = {}
+		settings["host"] = config.get('connection', 'host', fallback='localhost')
+		settings["port"] = config.get('connection', 'port', fallback='3306')
+		settings["database"] = config.get('connection', 'database', fallback='edxapp')
+		settings["user"] = config.get('connection', 'user', fallback='edxapp')
+		settings["password"] = config.get('connection', 'password')
+		
+		debug : bool = config.get('connection', 'debug', fallback=False)
+		if debug:
+			print("Connection Settings: ", settings)
+		
 		self.data_link = DataLink(settings)
+		self.config = config
 	
+	def sheets_data(self):
+		available_data = {
+			"summary": { 
+				'title': "Summary", 
+				'data': lambda: self.summary() 
+			},
+			
+			# Global - Now
+			"organizations": { 
+				'title': "Organizations", 
+				'data': lambda: self.organizations() 
+			},
+			"courses": { 
+				'title': "Courses", 
+				'data': lambda: self.courses() 
+			},
+			
+			# Global - History
+			"users": { 
+				'title': "Users", 
+				'data': lambda: self.global_enrollment_history() 
+			},
+			"certificates": { 
+				'title': "Certificates", 
+				'data': lambda: self.certificates_by_date() 
+			},
+
+			# Per Course - Now
+			"course_metrics": { 
+				'title': "Course Metrics", 
+				'data': lambda: self.overall_course_metrics() 
+			},
+
+			# Per Course - History
+			"enrollment": { 
+				'title': "Enrollment", 
+				'data': lambda: self.student_enrolled_by_course_by_date() 
+			},
+			"students_passed": { 
+				'title': "Students Passed", 
+				'data': lambda: self.student_passed_by_date() 
+			},
+			"blocks_completed": { 
+				'title': "Blocks Completed", 
+				'data': lambda: self.completed_blocks_by_date() 
+			},
+
+			# Usage - History
+			"last_login_by_day": { 
+				'title': "Last Login by Day", 
+				'data': lambda: self.last_login_by_day() 
+			},
+			"distinct_users_by_day": { 
+				'title': "Distinct Users by Day", 
+				'data': lambda: self.block_access_distinct_user_per_day() 
+			},
+			"distinct_users_by_month": { 
+				'title': "Distinct Users by Month", 
+				'data': lambda: self.block_access_distinct_user_per_month() 
+			},
+			
+			# Final Summary
+			"final_summary": { 
+				'title': "Final Summary", 
+				'data': lambda: self.final_summary() 
+			},
+		}
+		
+		enabled_data_keys = self.config.get('sheets', 'enabled', fallback=','.join(available_data.keys())).split(',')
+		enabled_data = {k:v for (k,v) in available_data.items() if k in enabled_data_keys}
+		
+		return list(map(lambda d: (d.get('title'), d.get('data')()), enabled_data.values()))
+
+
 	def summary(self):
 		return [dict({
 			"Version": "v2",

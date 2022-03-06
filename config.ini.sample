@@ -6,6 +6,10 @@ user = user
 password = password
 database = edxapp
 
+[sheets]
+# To export only specific sheets. By default export all.
+#enabled = organizations,courses
+
 [google_service_account]
 type = service_account
 project_id = project_id
