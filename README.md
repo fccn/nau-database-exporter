@@ -1,19 +1,22 @@
 # DatabaseExporter
 
-Exports data from MySQL database into an Excel Spreedsheet. On the NAU project it is
-used as a gateway for Google Data Studio data exploration.
+Exports Open edX data from MySQL database into a spreadsheet. 
+It is possible to export the sheets to a single multi sheet xlsx file or alternatively 
+update a Google Sheet file. On the NAU project it is used the second option.
+The NAU dashboard, based on Google Data Studio, use that Google Sheet has one of
+its data source.
 
-Should be run once a day and the .xls file available to the Google Data Studio cloud engine
-in order for NAU Managers to be able drill down data.
+This script should be run at least once a day, at preference at midnight, so that
+Google Sheet as the information for yesterday data.
 
-The queries should NEVER have reference to individual users. This means that the .xls
-file should never have the fields "auth_user.*" or "user_id" directly available.
+The queries don't have any reference to individual users, and don't have specific
+identification numbers, like user id, emails or similar data. 
 
 # Usage
 
  - Setup a Virtual Environment
- - Set the "config.ini" file based on the "config.init.sample".
- - Execute "report.py"
+ - Set the `config.ini` file based on the `config.init.sample`.
+ - Execute `report_xlsx.py` or `report_google.py`.
 
 ### Activate virtual environment and install its dependencies
 ```bash
@@ -25,10 +28,15 @@ pip install -r requirements.txt --upgrade
 ### Set the "config.ini" file based on the "config.init.sample".
 ```bash
 cp config.init.sample config.ini
-vi config.ini
+vim config.ini
 ```
 
-### Execute "report.py"
+### Export has xlsx file
 ```bash
-python report.py
+python report_xlsx.py
+```
+
+### Update a Google Sheet
+```bash
+python report_google.py
 ```
