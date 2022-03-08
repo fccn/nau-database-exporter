@@ -47,16 +47,10 @@ def export_queries_to_google(config : configparser.ConfigParser, queries):
 	credentials_list_tuples = config.items(section='google_service_account')
 	credentials_dict = dict(credentials_list_tuples)
 	gc = gspread.service_account_from_dict(credentials_dict)
-
 	worksheet_id = config.get('google_sheets', 'worksheet_id')
 	spreadsheet : Spreadsheet = gc.open_by_key(worksheet_id)
 	
-	progress : bool = config.get('google_sheets', 'progress', fallback=True)
-	
 	for name, query_result in queries:
-		if progress: 
-			print("Producing... " + name)
-		
 		# Get existing worksheet or create a new one
 		worksheet : Worksheet
 		try:

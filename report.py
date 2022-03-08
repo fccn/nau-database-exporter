@@ -33,13 +33,9 @@ def xlsx_worksheet(data, worksheet):
 def xlsx_export_queries(config : configparser.ConfigParser, queries):
 	file_name : str = config.get('xlsx', 'file', fallback='report.xlsx')
 	default_date_format : str = config.get('xlsx', 'default_date_format', fallback='yyyy-mm-dd')
-	progress : bool = config.get('xlsx', 'progress', fallback=True)
-	
 	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': default_date_format})
 	
 	for name, query_result in queries:
-		if progress: 
-			print("Producing... " + name)
 		worksheet = workbook.add_worksheet(name)
 		xlsx_worksheet(query_result, worksheet)
 	

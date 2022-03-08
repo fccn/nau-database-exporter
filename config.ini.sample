@@ -7,8 +7,9 @@ password = password
 database = edxapp
 
 [sheets]
+# progress = True
 # To export only specific sheets. By default export all.
-#enabled = organizations,courses
+#enabled = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,users,distinct_users_by_day,distinct_users_by_month,final_summary
 
 [google_service_account]
 type = service_account
@@ -27,7 +28,9 @@ token_uri = https://oauth2.googleapis.com/token
 auth_provider_x509_cert_url = https://www.googleapis.com/oauth2/v1/certs
 client_x509_cert_url = https://www.googleapis.com/robot/v1/metadata/x509/xxxxxxxxxxxxxxx%40yyyyyyyyyyyyy.iam.gserviceaccount.com
 
+[google_sheets]
+worksheet_id = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 [xlsx]
 file = nau_reports.xlsx
 default_date_format = yyyy-mm-dd
-progress = True

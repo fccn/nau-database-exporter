@@ -46,6 +46,7 @@ class DataLink:
 class Reports:
 	data_link = None
 	config : configparser.ConfigParser = None
+	progress : bool
 	
 	def __init__(self, config: configparser.ConfigParser):
 		settings : dict = {}
@@ -61,69 +62,40 @@ class Reports:
 		
 		self.data_link = DataLink(settings)
 		self.config = config
+
+		self.progress = config.get('sheets', 'progress', fallback=True)
 	
 	def sheets_data(self):
 		available_data = {
-			"summary": { 
-				'title': "Summary", 
-				'data': lambda: self.summary() 
-			},
-			
 			# Global - Now
 			"organizations": { 
 				'title': "Organizations", 
 				'data': lambda: self.organizations() 
 			},
-			"courses": { 
-				'title': "Courses", 
-				'data': lambda: self.courses() 
+			"course_runs": { 
+				'title': "Course runs", 
+				'data': lambda: self.course_runs() 
 			},
-			
-			# Global - History
+			"course_run_by_date": { 
+				'title': "Course run by date", 
+				'data': lambda: self.course_run_by_date() 
+			},
+			"enrollments_with_profile_info": {
+				'title': "Enrollments with profile info", 
+				'data': lambda: self.enrollments_with_profile_info() 
+			},
 			"users": { 
 				'title': "Users", 
-				'data': lambda: self.global_enrollment_history() 
-			},
-			"certificates": { 
-				'title': "Certificates", 
-				'data': lambda: self.certificates_by_date() 
-			},
-
-			# Per Course - Now
-			"course_metrics": { 
-				'title': "Course Metrics", 
-				'data': lambda: self.overall_course_metrics() 
-			},
-
-			# Per Course - History
-			"enrollment": { 
-				'title': "Enrollment", 
-				'data': lambda: self.student_enrolled_by_course_by_date() 
-			},
-			"students_passed": { 
-				'title': "Students Passed", 
-				'data': lambda: self.student_passed_by_date() 
-			},
-			"blocks_completed": { 
-				'title': "Blocks Completed", 
-				'data': lambda: self.completed_blocks_by_date() 
-			},
-
-			# Usage - History
-			"last_login_by_day": { 
-				'title': "Last Login by Day", 
-				'data': lambda: self.last_login_by_day() 
+				'data': lambda: self.users() 
 			},
 			"distinct_users_by_day": { 
 				'title': "Distinct Users by Day", 
-				'data': lambda: self.block_access_distinct_user_per_day() 
+				'data': lambda: self.distinct_users_by_day() 
 			},
 			"distinct_users_by_month": { 
 				'title': "Distinct Users by Month", 
-				'data': lambda: self.block_access_distinct_user_per_month() 
+				'data': lambda: self.distinct_users_by_month() 
 			},
-			
-			# Final Summary
 			"final_summary": { 
 				'title': "Final Summary", 
 				'data': lambda: self.final_summary() 
@@ -133,7 +105,13 @@ class Reports:
 		enabled_data_keys = self.config.get('sheets', 'enabled', fallback=','.join(available_data.keys())).split(',')
 		enabled_data = {k:v for (k,v) in available_data.items() if k in enabled_data_keys}
 		
-		return list(map(lambda d: (d.get('title'), d.get('data')()), enabled_data.values()))
+		return list(map(self._apply_data, enabled_data.values()))
+
+	def _apply_data(self, d:dict):
+		title = d.get('title')
+		if self.progress:
+			print("Producing... " + title)
+		return (title, d.get('data')())
 
 
 	def summary(self):
@@ -172,183 +150,182 @@ class Reports:
 		# TODO: replace all the column names with just sufficient columns
 		return self.data_link.query("SELECT id, created, modified, name, short_name, description, logo, active FROM organizations_organization")
 	
-	def courses(self):
-		# TODO: replace all the column names with just sufficient columns
+	def course_runs(self):
+		"""
+		Each line is a course run.
+		"""
 		return self.data_link.query("""
 			SELECT 
 				SUBSTRING_INDEX(SUBSTRING_INDEX(id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(id, '+', -2), '+', 1) as course_code,
 				SUBSTRING_INDEX(id, '+', -1) as edition_code,
-				created, modified, version, id, _location, display_name, display_number_with_default, display_org_with_default, start, end, advertised_start, course_image_url, social_sharing_url, end_of_course_survey_url, certificates_display_behavior, certificates_show_before_end, cert_html_view_enabled, has_any_active_web_certificate, cert_name_short, cert_name_long, lowest_passing_grade, days_early_for_beta, mobile_available, visible_to_staff_only, _pre_requisite_courses_json, enrollment_start, enrollment_end, enrollment_domain, invitation_only, max_student_enrollments_allowed, announcement, catalog_visibility, course_video_url, effort, short_description, org, self_paced, marketing_url, eligible_for_financial_aid, language, certificate_available_date, end_date, start_date FROM course_overviews_courseoverview
-		""")
-	
-	def overall_course_metrics(self):
-		return self.data_link.query("""
-			SELECT 
-				SUBSTRING_INDEX(SUBSTRING_INDEX(coc.id, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(coc.id, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(coc.id, '+', -1) as edition_code,
-				coc.id,
-				coc.display_name,
-				coc.display_org_with_default,
-			    (select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled,
-			    (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates,
-			    (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade
+				(select oo.name from organizations_organization oo WHERE org_code = oo.short_name) as org_name,
+				created, modified, id, _location, display_name, 
+				start, end, 
+				advertised_start, 
+				CONCAT('https://lms.nau.edu.pt', course_image_url) as course_image_url, 
+				social_sharing_url, 
+				certificates_display_behavior, 
+				certificates_show_before_end, cert_html_view_enabled, 
+				has_any_active_web_certificate, cert_name_short, cert_name_long, 
+				lowest_passing_grade, days_early_for_beta, mobile_available, 
+				visible_to_staff_only, enrollment_start, 
+				enrollment_end, enrollment_domain, invitation_only, 
+				max_student_enrollments_allowed, announcement, catalog_visibility, 
+				course_video_url, effort, self_paced, 
+				certificate_available_date, end_date, start_date,
+				COALESCE(enrollment_start, start_date) as enrollment_start_or_course_start,
+    			COALESCE(enrollment_end, end_date) as enrollment_end_or_course_end,
+				DATEDIFF(COALESCE(enrollment_start, start_date), NOW()) as days_to_enrollment_start,
+    			DATEDIFF(start_date, NOW()) as days_to_course_start,
+    			DATEDIFF(COALESCE(enrollment_end, end_date), NOW()) as days_to_enrollment_end,
+    			DATEDIFF(end_date, NOW()) as days_to_course_end,
+				(select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled_count,
+				(select count(1) from student_courseenrollment sce WHERE sce.course_id = coc.id and sce.is_active) AS enrolled_count_active,
+			    (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates_count,
+			    (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade,
+				(select count(1) from course_overviews_courseoverview coc2 where course_code=SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1)) as course_runs_count,
+				(select id from course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = id as course_run_is_first_edition
 			FROM course_overviews_courseoverview coc
 		""")
 	
-	def certificates_by_date(self):
+	def course_run_by_date(self):
 		return self.data_link.query("""
 			SELECT 
 				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
 				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+				(select oo.name from organizations_organization oo WHERE org_code = oo.short_name) as org_name,				
 				course_id, 
-				DATE_FORMAT(created_date, "%Y-%m-%d") AS date, 
-				count(1) AS cnt
-			FROM certificates_generatedcertificate
+				date, 
+				SUM(enrollments_count) as enrollments_count, 
+				SUM(passed) as passed,
+				SUM(certificates_count) as certificates_count,
+				SUM(block_completion_count) as block_completion_count,
+				SUM(distinct_users_count) as distinct_users_count
+			FROM (
+			(
+				SELECT 
+					course_id, 
+					DATE_FORMAT(sce.created, "%Y-%m-%d") date, 
+					count(1) as enrollments_count,
+					0 as passed,
+					0 as certificates_count,
+					0 as block_completion_count,
+					0 AS distinct_users_count
+				FROM student_courseenrollment sce
+				GROUP BY course_id, date
+			) UNION (
+				SELECT 
+					course_id, 
+					DATE_FORMAT(gpg.passed_timestamp, "%Y-%m-%d") AS date, 
+					0 as enrollments_count,
+					count(1) as passed,
+					0 as certificates_count,
+					0 as block_completion_count,
+					0 AS distinct_users_count
+				FROM grades_persistentcoursegrade gpg
+				WHERE gpg.passed_timestamp is not null
+				GROUP BY course_id, date
+			) UNION (
+				SELECT
+					course_id,
+					DATE_FORMAT(created_date, "%Y-%m-%d") AS date, 
+					0 as enrollments_count,
+					0 as passed,
+					count(1) AS certificates_count,
+					0 as block_completion_count,
+					0 AS distinct_users_count
+				FROM certificates_generatedcertificate
+				GROUP BY course_id, date
+			) UNION (
+				SELECT 
+					course_key as course_id,
+					date_format(cbc.created, "%Y-%m-%d") as date,
+					0 as enrollments_count,
+					0 as passed,
+					0 AS certificates_count,
+					COUNT(1) as block_completion_count,
+					0 AS distinct_users_count
+				FROM completion_blockcompletion cbc
+				GROUP BY course_key, date
+			) UNION (
+				SELECT 
+					course_key as course_id,
+					date_format(cbc.created, "%Y-%m-%d") as date,
+					0 as enrollments_count,
+					0 as passed,
+					0 AS certificates_count,
+					0 AS block_completion_count,
+					COUNT(DISTINCT user_id) as distinct_users_count
+				FROM completion_blockcompletion cbc
+				GROUP BY course_key, date
+			)
+			) as t
 			GROUP BY course_id, date
 			"""
 		)
-	
-	def current_enrollment_distribution(self):
+
+	def enrollments_with_profile_info(self):
+		"""
+		Enrollment data with student information
+		"""
 		return self.data_link.query("""
 			SELECT
-				sce.user_id as user, count(1) as cnt
-			FROM
-				auth_user au,
-				student_courseenrollment sce
-			WHERE
-				au.is_staff = 0
-			AND
-				au.id = sce.user_id
-			GROUP BY
-				sce.user_id
-		  """)
-	
-	def global_enrollment_history(self):
-		response = self.data_link.query("""
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+				(select oo.name from organizations_organization oo WHERE org_code = oo.short_name) as org_name,
+				au.year_of_birth, 
+				au.gender, 
+				au.level_of_education, 
+				au.country,
+				sce.course_id, 
+				DATE_FORMAT(sce.created, "%Y-%m-%d") AS enrollment_created_date, 
+				sce.is_active, 
+				sce.mode as enrollment_mode, 
+				nuem.employment_situation,
+				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id) as user_enrollments_count,
+				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) = org_code ) as same_org_enrollments_count,
+				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org
+			FROM student_courseenrollment sce
+			left join auth_userprofile au on sce.user_id = au.user_id
+			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = sce.user_id
+		""")
+
+	def users(self):
+		return self.data_link.query("""
 			SELECT
 				date_format(date_joined, "%Y-%m-%d") as register_date,
-				count(1) AS cnt,
-				SUM(is_active) AS active
+				au.is_active,
+				aup.year_of_birth, 
+				aup.gender, 
+				aup.level_of_education, 
+				aup.country, 
+				nuem.employment_situation,
+				(select count(1) from student_courseenrollment sce where sce.user_id = au.id) as enrollment_count
 			FROM
 				auth_user au
-			GROUP BY register_date
-			""")
-		
-		cnt_registered = 0
-		cnt_active = 0
-		for line in response:
-			cnt_registered += line["cnt"]
-			cnt_active += line["active"]
-			line["sum_cnt"] = cnt_registered
-			line["sum_active"] = cnt_active
-		
-		return response
-
-	def last_login_by_day(self):
-		return self.data_link.query("""
-			SELECT
-				date_format(last_login, "%Y-%m-%d") as last_login_date,
-				count(1) AS last_logins
-			FROM
-				auth_user au
-			GROUP BY last_login_date
-			""")
-
-	def studentmodule_history(self):
-		return self.data_link.query("""
-   			SELECT DATE_FORMAT(csm.created, "%Y-%m-%d") date, COUNT(csm.id) cnt
-			FROM courseware_studentmodule csm
-			GROUP BY date
+			left join auth_userprofile aup on aup.user_id = au.id
+			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = au.id
 		""")
 		
-	def courseenrollment_allowed(self):
+	def distinct_users_by_day(self):
+		"""
+		This gives the number of users that have learn by day
+		"""
 		return self.data_link.query("""
-   			SELECT 
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
-			    course_id,
-			    count(1) as students
-			FROM student_courseenrollmentallowed scea
-			GROUP BY course_id
-		""")
-		
-	def student_enrolled_by_course_by_date(self): #
-		return self.data_link.query("""
-   			SELECT 
-			    SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
-				course_id, 
-				DATE_FORMAT(sce.created, "%Y-%m-%d") date, 
-				count(sce.user_id) as students
-			FROM student_courseenrollment sce
-			GROUP BY course_id, date
-		""")
-
-	def student_passed_by_date(self): #
-		return self.data_link.query("""
-   			SELECT 
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
-			    course_id, 
-				date, 
-				COUNT(user_id) AS test, 
-				SUM(passou) AS pass
-			FROM (
-				SELECT course_id, DATE_FORMAT(gpg.course_edited_timestamp, "%Y-%m-%d") AS date, user_id, if(gpg.percent_grade > 0,1,0) AS passou
-				FROM grades_persistentcoursegrade gpg
-		    ) AS a
-			GROUP BY course_id, date
-		""")
-
-	def completed_blocks_by_date(self): #
-		return self.data_link.query("""
-   			SELECT 
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_key, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_key, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(course_key, '+', -1) as edition_code,
-			    course_key,
-				block_type,
-				date_format(cbc.created, "%Y-%m-%d") as date,
-				COUNT(user_id) as users
-			FROM completion_blockcompletion cbc
-			GROUP BY course_key, block_type, date
-		""")
-		
-	def block_access_distinct_user_per_day(self):  #
-		return self.data_link.query("""
-	 		SELECT DATE_FORMAT(created, "%Y-%m-%d") date, COUNT(distinct user_id)
+	 		SELECT DATE_FORMAT(created, "%Y-%m-%d") date, COUNT(distinct user_id) as users
 			FROM completion_blockcompletion cbc
 			GROUP BY date
 		""")
 	
-	def block_access_distinct_user_per_month(self):  #
+	def distinct_users_by_month(self):
+		"""
+		Number of users that have learn on the platform by month
+		"""
 		return self.data_link.query("""
-	 		SELECT DATE_FORMAT(created, "%Y-%m") date, COUNT(distinct user_id)
+	 		SELECT DATE_FORMAT(created, "%Y-%m") date, COUNT(distinct user_id) as users
 			FROM completion_blockcompletion cbc
 			GROUP BY date
 		""")
-	
-	def course_metrics(self, course):
-		return self.data_link.query("""
-			select coc.id as id,
-			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrollments,
-  			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates
-	    	from course_overviews_courseoverview coc
-	    	where id = '{course_id}'
-		""".format(course_id=course["id"]))[0]
-	
-	def invoice_data(self, course):
-		return self.data_link.query("""
-			select coc.id as id, coc.*,
-			(SELECT count(1) FROM student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrollments,
-			(SELECT count(1) FROM certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates
-			from course_overviews_courseoverview coc
-			where id = '{course_id}'
-		""".format(course_id=course["id"]))[0]
-
