@@ -282,12 +282,13 @@ class Reports:
 				au.country,
 				sce.course_id, 
 				DATE_FORMAT(sce.created, "%Y-%m-%d") AS enrollment_created_date, 
-				sce.is_active, 
+				sce.is_active as enrollment_is_active, 
 				sce.mode as enrollment_mode, 
 				nuem.employment_situation,
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id) as user_enrollments_count,
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) = org_code ) as same_org_enrollments_count,
-				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org
+				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org,
+				au.is_active as user_is_active
 			FROM student_courseenrollment sce
 			left join auth_userprofile au on sce.user_id = au.user_id
 			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = sce.user_id
