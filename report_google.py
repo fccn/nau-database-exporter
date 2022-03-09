@@ -15,6 +15,8 @@ from nau import Reports
 def transform_value(value):
 	if isinstance(value, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta)):
 		return value.strftime("%Y-%m-%d") #  %H:%M:%S
+	elif value is None:
+		return ""
 	else:
 		# convert Decimal to str
 		return str(value)
