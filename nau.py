@@ -147,8 +147,11 @@ class Reports:
 		})]
 	
 	def organizations(self):
-		# TODO: replace all the column names with just sufficient columns
-		return self.data_link.query("SELECT id, created, modified, name, short_name, description, logo, active FROM organizations_organization")
+		return self.data_link.query("""
+			SELECT 
+				id, created, modified, name, short_name, description, logo, active 
+			FROM organizations_organization
+		""")
 	
 	def course_runs(self):
 		"""
