@@ -190,6 +190,7 @@ class Reports:
 				(select count(1) from course_overviews_courseoverview coc2 where course_code=SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1)) as course_runs_count,
 				(select id from course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = id as course_run_is_first_edition
 			FROM course_overviews_courseoverview coc
+			ORDER BY created ASC
 		""")
 	
 	def course_run_by_date(self):
@@ -266,6 +267,7 @@ class Reports:
 			)
 			) as t
 			GROUP BY course_id, date
+			ORDER BY date ASC
 			"""
 		)
 
