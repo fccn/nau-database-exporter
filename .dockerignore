@@ -1,0 +1,6 @@
+.idea/
+.old/
+__pycache__/
+venv/
+*.xlsx
+config.ini
