@@ -277,9 +277,9 @@ class Reports:
 		"""
 		return self.data_link.query("""
 			SELECT
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
-				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
-				SUBSTRING_INDEX(course_id, '+', -1) as edition_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
 				(select oo.name from organizations_organization oo WHERE org_code = oo.short_name) as org_name,
 				aup.year_of_birth, 
 				aup.gender, 
@@ -292,7 +292,10 @@ class Reports:
 				nuem.employment_situation,
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id) as user_enrollments_count,
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) = org_code ) as same_org_enrollments_count,
-				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org
+				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org,
+				(select count(1) from grades_persistentcoursegrade gpcg where sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null) as passed,
+				(select count(1) from certificates_generatedcertificate cgc where sce.user_id = cgc.user_id and sce.course_id = cgc.course_id) as certificate,
+				aup.country in ('AO','BR','CV','GW','GQ','MZ','PT','ST','TL') as cplp
 			FROM student_courseenrollment sce
 			left join auth_userprofile aup on sce.user_id = aup.user_id
 			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = sce.user_id
