@@ -294,6 +294,7 @@ class Reports:
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) = org_code ) as same_org_enrollments_count,
 				(select count(1) from student_courseenrollment sce2 where sce2.user_id = sce.user_id and SUBSTRING_INDEX(SUBSTRING_INDEX(sce2.course_id, ':', -1), '+', 1) != org_code ) = 0 as only_enrollments_this_org,
 				(select count(1) from grades_persistentcoursegrade gpcg where sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null) as passed,
+				(select gpcg.passed_timestamp from grades_persistentcoursegrade gpcg where sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null) as passed_timestamp,
 				(select count(1) from certificates_generatedcertificate cgc where sce.user_id = cgc.user_id and sce.course_id = cgc.course_id) as certificate,
 				aup.country in ('AO','BR','CV','GW','GQ','MZ','PT','ST','TL') as cplp
 			FROM student_courseenrollment sce
