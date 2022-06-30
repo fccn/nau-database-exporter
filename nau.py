@@ -188,7 +188,8 @@ class Reports:
 			    (select count(1) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates_count,
 			    (select AVG(grade) from certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade,
 				(select count(1) from course_overviews_courseoverview coc2 where course_code=SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1)) as course_runs_count,
-				(select id from course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = id as course_run_is_first_edition
+				(select id from course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = id as course_run_is_first_edition,
+				(select count(1) from grades_persistentcoursegrade gpcg where coc.id = gpcg.course_id and gpcg.passed_timestamp is not null) as passed
 			FROM course_overviews_courseoverview coc
 			ORDER BY created ASC
 		""")
