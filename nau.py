@@ -64,9 +64,8 @@ class Reports:
 		self.config = config
 
 		self.progress = config.get('sheets', 'progress', fallback=True)
-	
-	def sheets_data(self):
-		available_data = {
+
+		self.available_data = {
 			# Global - Now
 			"organizations": { 
 				'title': "Organizations", 
@@ -83,6 +82,26 @@ class Reports:
 			"enrollments_with_profile_info": {
 				'title': "Enrollments with profile info", 
 				'data': lambda: self.enrollments_with_profile_info() 
+			},
+			"enrollments_year_of_birth": {
+				'title': "Enrollments with year of birth",
+				'data': lambda: self.enrollments_year_of_birth()
+			},
+			"enrollments_gender": {
+				'title': "Enrollments with gender",
+				'data': lambda: self.enrollments_gender()
+			},
+			"enrollments_level_of_education": {
+				'title': "Enrollments with level of education",
+				'data': lambda: self.enrollments_level_of_education()
+			},
+			"enrollments_country": {
+				'title': "Enrollments with country",
+				'data': lambda: self.enrollments_country()
+			},
+			"enrollments_employment_situation": {
+				'title': "Enrollments with employment situation",
+				'data': lambda: self.enrollments_employment_situation()
 			},
 			"users": { 
 				'title': "Users", 
@@ -101,18 +120,24 @@ class Reports:
 				'data': lambda: self.final_summary() 
 			},
 		}
-		
-		enabled_data_keys = self.config.get('sheets', 'enabled', fallback=','.join(available_data.keys())).split(',')
-		enabled_data = {k:v for (k,v) in available_data.items() if k in enabled_data_keys}
-		
-		return list(map(self._apply_data, enabled_data.values()))
+
+	def available_sheets_to_export_keys(self):
+		return self.available_data.keys()
+
+	def sheets_data(self, enabled_sheets_keys_list:list):
+		# keys = enabled_sheets_keys_list if isinstance(enabled_sheets_keys_list, list) else self.available_data.values()
+		filtered_available_data = [value for key, value in self.available_data.items() if key in enabled_sheets_keys_list]
+		return list(map(self._apply_data, filtered_available_data))
+
+	def sheets_data_enabled(self):
+		enabled_data_keys = self.config.get('sheets', 'enabled', fallback=','.join(self.available_data.keys())).split(',')
+		return {k:v for (k,v) in self.available_data.items() if k in enabled_data_keys}
 
 	def _apply_data(self, d:dict):
 		title = d.get('title')
 		if self.progress:
 			print("Producing... " + title)
 		return (title, d.get('data')())
-
 
 	def summary(self):
 		return [dict({
@@ -301,6 +326,97 @@ class Reports:
 			FROM student_courseenrollment sce
 			left join auth_userprofile aup on sce.user_id = aup.user_id
 			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = sce.user_id
+		""")
+
+	def enrollments_year_of_birth(self):
+		"""
+		Enrollment data with year of birth
+		"""
+		return self.data_link.query("""
+			SELECT
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
+				aup.year_of_birth,
+				count(gpcg.id) as approved,
+				count(1) as enrolled
+			FROM student_courseenrollment sce
+			left join auth_userprofile aup on sce.user_id = aup.user_id
+			left join grades_persistentcoursegrade gpcg on sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null
+			GROUP BY org_code, course_code, edition_code, year_of_birth, sce.course_id
+		""")
+
+	def enrollments_gender(self):
+		"""
+		Enrollment data with year of birth
+		"""
+		return self.data_link.query("""
+			SELECT
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
+				aup.gender,
+				count(gpcg.id) as approved,
+				count(1) as enrolled
+			FROM student_courseenrollment sce
+			left join auth_userprofile aup on sce.user_id = aup.user_id
+			left join grades_persistentcoursegrade gpcg on sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null
+			GROUP BY sce.course_id, gender, sce.course_id
+		""")
+
+	def enrollments_level_of_education(self):
+		"""
+		Enrollment data with year of birth
+		"""
+		return self.data_link.query("""
+			SELECT
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
+				aup.level_of_education,
+				count(gpcg.id) as approved,
+				count(1) as enrolled
+			FROM student_courseenrollment sce
+			left join auth_userprofile aup on sce.user_id = aup.user_id
+			left join grades_persistentcoursegrade gpcg on sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null
+			GROUP BY sce.course_id, level_of_education, sce.course_id
+		""")
+
+	def enrollments_country(self):
+		"""
+		Enrollment data with year of birth
+		"""
+		return self.data_link.query("""
+			SELECT
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
+				aup.country,
+				aup.country in ('AO','BR','CV','GW','GQ','MZ','PT','ST','TL') as cplp,
+				count(gpcg.id) as approved,
+				count(1) as enrolled
+			FROM student_courseenrollment sce
+			left join auth_userprofile aup on sce.user_id = aup.user_id
+			left join grades_persistentcoursegrade gpcg on sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null
+			GROUP BY sce.course_id, country
+		""")
+
+	def enrollments_employment_situation(self):
+		"""
+		Enrollment data with employment situation
+		"""
+		return self.data_link.query("""
+			SELECT
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
+				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
+				SUBSTRING_INDEX(sce.course_id, '+', -1) as edition_code,
+				nuem.employment_situation,
+				count(gpcg.id) as approved,
+				count(1) as enrolled
+			FROM student_courseenrollment sce
+			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = sce.user_id
+			left join grades_persistentcoursegrade gpcg on sce.course_id = gpcg.course_id and sce.user_id = gpcg.user_id and gpcg.passed_timestamp is not null
+			GROUP BY sce.course_id, employment_situation
 		""")
 
 	def users(self):

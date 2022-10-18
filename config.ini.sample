@@ -8,8 +8,6 @@ database = edxapp
 
 [sheets]
 # progress = True
-# To export only specific sheets. By default export all.
-#enabled = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,users,distinct_users_by_day,distinct_users_by_month,final_summary
 
 [google_service_account]
 type = service_account
@@ -29,8 +27,19 @@ auth_provider_x509_cert_url = https://www.googleapis.com/oauth2/v1/certs
 client_x509_cert_url = https://www.googleapis.com/robot/v1/metadata/x509/xxxxxxxxxxxxxxx%40yyyyyyyyyyyyy.iam.gserviceaccount.com
 
 [google_sheets]
-worksheet_id = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+organizations = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+course_runs = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+course_run_by_date = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+enrollments_year_of_birth = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+enrollments_gender = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+enrollments_level_of_education = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+enrollments_country = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+enrollments_employment_situation = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+users = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+distinct_users_by_day = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+distinct_users_by_month = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [xlsx]
 file = nau_reports.xlsx
 default_date_format = yyyy-mm-dd
+export = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,users,distinct_users_by_day,distinct_users_by_month,final_summary

@@ -30,14 +30,19 @@ def xlsx_worksheet(data, worksheet):
 		row += 1
 
 
-def xlsx_export_queries(config : configparser.ConfigParser, queries):
+def xlsx_export_queries(config : configparser.ConfigParser, report:Reports):
+
 	file_name : str = config.get('xlsx', 'file', fallback='report.xlsx')
 	default_date_format : str = config.get('xlsx', 'default_date_format', fallback='yyyy-mm-dd')
 	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': default_date_format})
+
+	sheets_to_export_keys = config.get('xlsx', 'export', fallback=','.join(report.available_sheets_to_export_keys())).split(',')
 	
-	for name, query_result in queries:
-		worksheet = workbook.add_worksheet(name)
-		xlsx_worksheet(query_result, worksheet)
+	for sheet_key in sheets_to_export_keys:
+		sheets_results = report.sheets_data([sheet_key])
+		for sheet_title, sheet_result in sheets_results:
+			worksheet = workbook.add_worksheet(sheet_title)
+			xlsx_worksheet(sheet_result, worksheet)
 	
 	workbook.close()
 
@@ -46,7 +51,7 @@ def main():
 	config = configparser.ConfigParser()
 	config.read('config.ini')
 	nau_reports = Reports(config)
-	xlsx_export_queries(config, nau_reports.sheets_data())
+	xlsx_export_queries(config, nau_reports)
 
 
 if __name__ == "__main__":
