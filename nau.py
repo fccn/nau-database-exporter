@@ -105,7 +105,11 @@ class Reports:
 			},
 			"users": { 
 				'title': "Users", 
-				'data': lambda: self.users() 
+				'data': lambda: self.users()
+			},
+			"registered_users_by_day": { 
+				'title': "Registered users by day", 
+				'data': lambda: self.registered_users_by_day()
 			},
 			"distinct_users_by_day": { 
 				'title': "Distinct Users by Day", 
@@ -435,7 +439,35 @@ class Reports:
 			left join auth_userprofile aup on aup.user_id = au.id
 			left join nau_openedx_extensions_nauuserextendedmodel nuem on nuem.user_id = au.id
 		""")
-		
+
+	def registered_users_by_day(self):
+		return self.data_link.query("""
+			SELECT register_date, sum(active) as total_active, sum(total) as total
+			FROM 
+			(
+				(
+					SELECT
+						date_format(date_joined, "%Y-%m-%d") as register_date,
+						0 as active,
+						count(1) as total
+					FROM
+						auth_user au
+					GROUP BY date_format(date_joined, "%Y-%m-%d"), au.is_active
+				) UNION (
+					SELECT
+						date_format(date_joined, "%Y-%m-%d") as register_date,
+						count(1) as active,
+						0 as total
+					FROM
+						auth_user au
+					WHERE is_active=true
+					GROUP BY date_format(date_joined, "%Y-%m-%d"), au.is_active
+				)
+			) as t
+			GROUP BY register_date
+			ORDER BY register_date ASC
+		""")
+
 	def distinct_users_by_day(self):
 		"""
 		This gives the number of users that have learn by day
