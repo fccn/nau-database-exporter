@@ -8,9 +8,8 @@ class DataLink:
 	
 	def __init__(self, config):
 		self.settings = config
-		self.connect()
 	
-	def connect(self):
+	def _connect(self):
 		self.connection = mysql.connector.connect(
 			host=self.settings["host"],
 			port=self.settings["port"],
@@ -19,10 +18,11 @@ class DataLink:
 			database=self.settings["database"]
 		)
 	
-	def close(self):
+	def _close(self):
 		self.connection.close()
 	
 	def query(self, query):  # return a query result set as an list of dicts
+		self._connect()
 		mycursor = self.connection.cursor()
 		mycursor.execute(query)
 		description = mycursor.description
@@ -34,12 +34,15 @@ class DataLink:
 			for idx, column in enumerate(description):
 				r[column[0]] = row[idx]
 			result.append(r)
+		self._close()
 		return result
 	
 	def get(self, query):  # returns only one value on one line
+		self._connect()
 		mycursor = self.connection.cursor()
 		mycursor.execute(query)
 		row = mycursor.fetchone()
+		self._close()
 		return row[0]
 
 
@@ -53,7 +56,7 @@ class Reports:
 		settings["host"] = config.get('connection', 'host', fallback='localhost')
 		settings["port"] = config.get('connection', 'port', fallback='3306')
 		settings["database"] = config.get('connection', 'database', fallback='edxapp')
-		settings["user"] = config.get('connection', 'user', fallback='edxapp')
+		settings["user"] = config.get('connection', 'user', fallback='read_only')
 		settings["password"] = config.get('connection', 'password')
 		
 		debug : bool = config.get('connection', 'debug', fallback=False)
