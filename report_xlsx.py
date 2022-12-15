@@ -50,7 +50,7 @@ def xlsx_export_queries(config : configparser.ConfigParser, report:Reports):
 def main():
 	config = configparser.ConfigParser()
 	config.read('config.ini')
-	nau_reports = Reports(config)
+	nau_reports = Reports(False, config)
 	xlsx_export_queries(config, nau_reports)
 
 

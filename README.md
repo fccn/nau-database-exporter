@@ -31,6 +31,13 @@ cp config.init.sample config.ini
 vim config.ini
 ```
 
+### Update precalculated data
+To update the precalculated data run:
+
+```bash
+python update_data.py
+```
+
 ### Export has xlsx file
 ```bash
 python report_xlsx.py

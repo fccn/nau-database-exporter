@@ -75,7 +75,7 @@ def export_queries_to_google(config : configparser.ConfigParser, report:Reports)
 def main():
 	config = configparser.ConfigParser()
 	config.read('config.ini')
-	nau_reports = Reports(config)
+	nau_reports = Reports(False, config)
 	export_queries_to_google(config, nau_reports)
 
 
