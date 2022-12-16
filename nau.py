@@ -277,8 +277,7 @@ class Reports:
 					count(1) as enrollments_count,
 					0 as passed,
 					0 as certificates_count,
-					0 as block_completion_count,
-					0 AS distinct_users_count
+					0 as block_completion_count
 				FROM {self.edxapp_database}.student_courseenrollment sce
 				GROUP BY course_id, date
 			""")
@@ -292,8 +291,7 @@ class Reports:
 					0 as enrollments_count,
 					count(1) as passed,
 					0 as certificates_count,
-					0 as block_completion_count,
-					0 AS distinct_users_count
+					0 as block_completion_count
 				FROM {self.edxapp_database}.grades_persistentcoursegrade gpg
 				WHERE gpg.passed_timestamp is not null
 				GROUP BY course_id, date
@@ -308,8 +306,7 @@ class Reports:
 					0 as enrollments_count,
 					0 as passed,
 					count(1) AS certificates_count,
-					0 as block_completion_count,
-					0 AS distinct_users_count
+					0 as block_completion_count
 				FROM {self.edxapp_database}.certificates_generatedcertificate
 				GROUP BY course_id, date
 			""")
@@ -323,27 +320,11 @@ class Reports:
 					0 as enrollments_count,
 					0 as passed,
 					0 AS certificates_count,
-					COUNT(1) as block_completion_count,
-					0 AS distinct_users_count
+					COUNT(1) as block_completion_count
 				FROM {self.edxapp_database}.completion_blockcompletion cbc
 				GROUP BY course_key, date
 			""")
 			create_index_course_id_date('COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_COUNT')
-			self._sleep_if_need()
-
-			self._create_tmp_table('COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_DISTINCT_USERS', f"""
-				SELECT 
-					course_key as course_id,
-					date_format(cbc.created, "%Y-%m-%d") as date,
-					0 as enrollments_count,
-					0 as passed,
-					0 AS certificates_count,
-					0 AS block_completion_count,
-					COUNT(DISTINCT user_id) as distinct_users_count
-				FROM {self.edxapp_database}.completion_blockcompletion cbc
-				GROUP BY course_key, date
-			""")
-			create_index_course_id_date('COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_DISTINCT_USERS')
 			self._sleep_if_need()
 
 		return self._create_and_return_table('DATA_COURSE_RUN_BY_DATE', f"""
@@ -357,8 +338,7 @@ class Reports:
 				SUM(enrollments_count) as enrollments_count, 
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
-				SUM(block_completion_count) as block_completion_count,
-				SUM(distinct_users_count) as distinct_users_count
+				SUM(block_completion_count) as block_completion_count
 			FROM (
 				(
 					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_STUDENT_COURSEENROLLMENT
@@ -368,8 +348,6 @@ class Reports:
 					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_CERTIFICATES_GENERATEDCERTIFICATE
 				) UNION (
 					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_COUNT
-				) UNION (
-					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_DISTINCT_USERS
 				)
 			) as t
 			GROUP BY course_id, date
