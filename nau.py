@@ -61,7 +61,7 @@ class Reports:
 	
 	def __init__(self, update_data: bool, config: configparser.ConfigParser):
 		self.update_data = update_data
-		self.seconds_between_updates = int(config.get('sync', 'seconds_between_updates'))
+		self.seconds_between_updates = int(config.get('data', 'seconds_between_updates'))
 		settings : dict = {}
 		settings["host"] = config.get('connection', 'host', fallback='localhost')
 		settings["port"] = config.get('connection', 'port', fallback='3306')
