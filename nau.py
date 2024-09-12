@@ -256,6 +256,18 @@ class Reports:
     			DATEDIFF(start, NOW()) as days_to_course_start,
     			DATEDIFF(COALESCE(enrollment_end, end), NOW()) as days_to_enrollment_end,
     			DATEDIFF(end, NOW()) as days_to_course_end,
+				(
+					SELECT CASE
+						WHEN (COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end) AND coc.start < NOW() AND NOW() < coc.end ) THEN 'ONGOING_OPEN'
+						WHEN (COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end) AND NOW() < coc.start ) THEN 'FUTURE_OPEN'
+						WHEN (COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end) AND coc.end < NOW() ) THEN 'ARCHIVED_OPEN'
+						WHEN (NOW() < COALESCE(coc.enrollment_start, coc.start) AND NOW() < coc.start ) THEN 'FUTURE_NOT_YET_OPEN'
+						WHEN (NOT(COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end)) AND NOW() AND NOW() < coc.start ) THEN 'FUTURE_CLOSED'
+						WHEN (NOT(COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end)) AND coc.start < NOW() AND NOW() < coc.end ) THEN 'ONGOING_CLOSED'
+						WHEN (NOT(COALESCE(coc.enrollment_start, coc.start) < NOW() AND NOW() < COALESCE(coc.enrollment_end, coc.end)) AND coc.end < NOW() ) THEN 'ARCHIVED_CLOSED' 
+						ELSE 'OTHER'
+					END
+				) AS availability_state,
 				(select count(1) from {self.edxapp_database}.student_courseenrollment sce WHERE sce.course_id = coc.id) AS enrolled_count,
 				(select count(1) from {self.edxapp_database}.student_courseenrollment sce WHERE sce.course_id = coc.id and sce.is_active) AS enrolled_count_active,
 			    (select count(1) from {self.edxapp_database}.certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS certificates_count,
@@ -337,6 +349,27 @@ class Reports:
 				(select oo.name from {self.edxapp_database}.organizations_organization oo WHERE org_code = oo.short_name) as org_name,				
 				course_id, 
 				date, 
+				(
+					SELECT CASE
+						WHEN (COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end) AND co.start < t.date AND t.date < co.end ) THEN 'ONGOING_OPEN'
+						WHEN (COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end) AND t.date < co.start ) THEN 'FUTURE_OPEN'
+						WHEN (COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end) AND co.end < t.date ) THEN 'ARCHIVED_OPEN'
+						WHEN (t.date < COALESCE(co.enrollment_start, co.start) AND t.date < co.start ) THEN 'FUTURE_NOT_YET_OPEN'
+						WHEN (NOT(COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end)) AND t.date AND t.date < co.start ) THEN 'FUTURE_CLOSED'
+						WHEN (NOT(COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end)) AND co.start < t.date AND t.date < co.end ) THEN 'ONGOING_CLOSED'
+						WHEN (NOT(COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end)) AND co.end < t.date ) THEN 'ARCHIVED_CLOSED' 
+						ELSE 'OTHER'
+					END
+					from edxapp.course_overviews_courseoverview co
+					where co.id = t.course_id
+				) as availability_state,
+				( SELECT co.enrollment_start from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_start,
+				( SELECT co.enrollment_end from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_end,
+				( SELECT co.start from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as start,
+				( SELECT co.end from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as end,
+				( SELECT co.display_name from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as course_name,
+				( SELECT co.catalog_visibility from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as catalog_visibility,
+				( SELECT co.social_sharing_url from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as course_marketing_url,
 				SUM(enrollments_count) as enrollments_count, 
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
