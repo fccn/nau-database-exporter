@@ -370,6 +370,8 @@ class Reports:
 				( SELECT co.display_name from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as course_name,
 				( SELECT co.catalog_visibility from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as catalog_visibility,
 				( SELECT co.social_sharing_url from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as course_marketing_url,
+				( SELECT co.self_paced from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as self_paced,
+				( SELECT co.invitation_only from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as invitation_only,
 				SUM(enrollments_count) as enrollments_count, 
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
