@@ -360,16 +360,16 @@ class Reports:
 						WHEN (NOT(COALESCE(co.enrollment_start, co.start) < t.date AND t.date < COALESCE(co.enrollment_end, co.end)) AND co.end < t.date ) THEN 'ARCHIVED_CLOSED' 
 						ELSE 'OTHER'
 					END
-					from edxapp.course_overviews_courseoverview co
+					from {self.edxapp_database}.course_overviews_courseoverview co
 					where co.id = t.course_id
 				) as availability_state,
-				( SELECT co.enrollment_start from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_start,
-				( SELECT co.enrollment_end from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_end,
-				( SELECT co.start from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as start,
-				( SELECT co.end from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as end,
-				( SELECT co.display_name from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as course_name,
-				( SELECT co.catalog_visibility from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as catalog_visibility,
-				( SELECT co.social_sharing_url from edxapp.course_overviews_courseoverview co where co.id = t.course_id) as course_marketing_url,
+				( SELECT co.enrollment_start from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_start,
+				( SELECT co.enrollment_end from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as enrollment_end,
+				( SELECT co.start from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as start,
+				( SELECT co.end from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as end,
+				( SELECT co.display_name from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as course_name,
+				( SELECT co.catalog_visibility from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as catalog_visibility,
+				( SELECT co.social_sharing_url from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as course_marketing_url,
 				SUM(enrollments_count) as enrollments_count, 
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
