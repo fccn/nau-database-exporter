@@ -530,14 +530,15 @@ class Reports:
 
 	def registered_users_by_day(self):
 		return self._create_and_return_table('DATA_REGISTERED_USERS_BY_DAY', f"""
-			SELECT register_date, sum(active) as total_active, sum(total) as total
+			SELECT register_date, sum(active) as total_active, sum(total) as total, sum(enrollment_count) as enrollment_count
 			FROM 
 			(
 				(
 					SELECT
 						date_format(date_joined, "%Y-%m-%d") as register_date,
 						0 as active,
-						count(1) as total
+						count(1) as total,
+						0 as enrollment_count
 					FROM
 						{self.edxapp_database}.auth_user au
 					GROUP BY date_format(date_joined, "%Y-%m-%d"), au.is_active
@@ -545,11 +546,21 @@ class Reports:
 					SELECT
 						date_format(date_joined, "%Y-%m-%d") as register_date,
 						count(1) as active,
-						0 as total
+						0 as total,
+						0 as enrollment_count
 					FROM
 						{self.edxapp_database}.auth_user au
 					WHERE is_active=true
 					GROUP BY date_format(date_joined, "%Y-%m-%d"), au.is_active
+				) UNION (
+					SELECT
+						date_format(created, "%Y-%m-%d") as register_date,
+						0 as active,
+						0 as total,
+						count(1) as enrollment_count
+					FROM
+						{self.edxapp_database}.student_courseenrollment sce
+					GROUP BY date_format(created, "%Y-%m-%d")
 				)
 			) as t
 			GROUP BY register_date
