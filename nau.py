@@ -375,7 +375,8 @@ class Reports:
 				SUM(enrollments_count) as enrollments_count, 
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
-				SUM(block_completion_count) as block_completion_count
+				SUM(block_completion_count) as block_completion_count,
+				(select id from {self.edxapp_database}.course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = course_id as course_run_is_first_edition
 			FROM (
 				(
 					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_STUDENT_COURSEENROLLMENT
