@@ -71,13 +71,3 @@ def export_queries_to_google(config : configparser.ConfigParser, report:Reports)
 	
 	# Close connection to Google Cloud
 	gc.session.close()
-	
-def main():
-	config = configparser.ConfigParser()
-	config.read('config.ini')
-	nau_reports = Reports(False, config)
-	export_queries_to_google(config, nau_reports)
-
-
-if __name__ == "__main__":
-	main()

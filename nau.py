@@ -1,7 +1,7 @@
 from datetime import datetime
 import mysql.connector
 import configparser
-import time
+
 
 class DataLink:
 	connection = None
@@ -30,13 +30,23 @@ class DataLink:
 
 	def query(self, query):  # return a query result set as an list of dicts
 		self._connect()
-		mycursor = self.connection.cursor()
-		mycursor.execute(query)
-		description = mycursor.description
-		
+		cursor = self.connection.cursor()
+		query_with_transaction = f"""
+START TRANSACTION READ ONLY;
+{query};
+"""
+		results = cursor.execute(query_with_transaction, multi=True)
+
+		# assuming that only 1 statement returns data
+		for cur in results:
+			if cur.with_rows:
+				cursor = cur
+				break
+
+		description = cursor.description
 		result = []
-		
-		for row in mycursor.fetchall():
+
+		for row in cursor.fetchall():
 			r = {}
 			for idx, column in enumerate(description):
 				r[column[0]] = row[idx]
@@ -57,11 +67,8 @@ class Reports:
 	data_link = None
 	config : configparser.ConfigParser = None
 	progress : bool
-	update_data :bool
 	
-	def __init__(self, update_data: bool, config: configparser.ConfigParser):
-		self.update_data = update_data
-		self.seconds_between_updates = int(config.get('data', 'seconds_between_updates'))
+	def __init__(self, config: configparser.ConfigParser):
 		settings : dict = {}
 		settings["host"] = config.get('connection', 'host', fallback='localhost')
 		settings["port"] = config.get('connection', 'port', fallback='3306')
@@ -69,7 +76,6 @@ class Reports:
 		settings["user"] = config.get('connection', 'user', fallback='read_only')
 		settings["password"] = config.get('connection', 'password')
 		self.edxapp_database = config.get('connection', 'database', fallback='edxapp')
-		self.output_database = config.get('connection', 'output_database')
 		
 		debug : bool = config.get('connection', 'debug', fallback=False)
 		if debug:
@@ -156,34 +162,10 @@ class Reports:
 		title = d.get('title')
 		if self.progress:
 			print("Producing... " + title)
-		self._sleep_if_need()
 		return (title, d.get('data')())
 
-	def _sleep_if_need(self):
-		if self.update_data and self.seconds_between_updates:
-			time.sleep(self.seconds_between_updates)
-
-	def _create_tmp_table(self, table, query):
-		if self.update_data:
-			self.data_link.execute(f"""
-				DROP TABLE IF EXISTS {self.output_database}.TMP_{table}
-			""")
-			self.data_link.execute(f"""
-				CREATE TABLE {self.output_database}.TMP_{table} AS
-			""" + query)
-
-	def _create_and_return_table(self, table, query):
-		if self.update_data:
-			self._create_tmp_table(table, query)
-			self.data_link.execute(f"""
-				DROP TABLE IF EXISTS {self.output_database}.{table}
-			""")
-			self.data_link.execute(f"""
-				RENAME TABLE {self.output_database}.TMP_{table} TO {self.output_database}.{table}
-			""")
-		return self.data_link.query(f"""
-			SELECT * FROM {self.output_database}.{table}
-		""")
+	def _create_and_return_table(self, query):
+		return self.data_link.query(query)
 
 	def summary(self):
 		return [dict({
@@ -218,7 +200,7 @@ class Reports:
 		})]
 
 	def organizations(self):
-		return self._create_and_return_table('DATA_ORGANIZATIONS', f"""
+		return self._create_and_return_table(f"""
 			SELECT 
 				id, created, modified, name, short_name, description, logo, active 
 			FROM {self.edxapp_database}.organizations_organization
@@ -228,7 +210,7 @@ class Reports:
 		"""
 		Each line is a course run.
 		"""
-		return self._create_and_return_table('DATA_COURSE_RUNS', f"""
+		return self._create_and_return_table(f"""
 			SELECT 
 				SUBSTRING_INDEX(SUBSTRING_INDEX(id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(id, '+', -2), '+', 1) as course_code,
@@ -280,68 +262,7 @@ class Reports:
 		""")
 
 	def course_run_by_date(self):
-		def create_index_course_id_date(table):
-			self.data_link.execute(f"CREATE INDEX course_id_date ON {self.output_database}.TMP_{table} (date)")
-
-		if self.update_data:
-			self._create_tmp_table('COURSE_RUN_BY_DATE_STUDENT_COURSEENROLLMENT', f"""
-				SELECT 
-					course_id, 
-					DATE_FORMAT(sce.created, "%Y-%m-%d") date, 
-					count(1) as enrollments_count,
-					0 as passed,
-					0 as certificates_count,
-					0 as block_completion_count
-				FROM {self.edxapp_database}.student_courseenrollment sce
-				GROUP BY course_id, date
-			""")
-			create_index_course_id_date('COURSE_RUN_BY_DATE_STUDENT_COURSEENROLLMENT')
-			self._sleep_if_need()
-
-			self._create_tmp_table('COURSE_RUN_BY_DATE_GRADES_PERSISTENTCOURSEGRADE', f"""
-				SELECT 
-					course_id, 
-					DATE_FORMAT(gpg.passed_timestamp, "%Y-%m-%d") AS date, 
-					0 as enrollments_count,
-					count(1) as passed,
-					0 as certificates_count,
-					0 as block_completion_count
-				FROM {self.edxapp_database}.grades_persistentcoursegrade gpg
-				WHERE gpg.passed_timestamp is not null
-				GROUP BY course_id, date
-			""")
-			create_index_course_id_date('COURSE_RUN_BY_DATE_GRADES_PERSISTENTCOURSEGRADE')
-			self._sleep_if_need()
-
-			self._create_tmp_table('COURSE_RUN_BY_DATE_CERTIFICATES_GENERATEDCERTIFICATE', f"""
-				SELECT
-					course_id,
-					DATE_FORMAT(created_date, "%Y-%m-%d") AS date, 
-					0 as enrollments_count,
-					0 as passed,
-					count(1) AS certificates_count,
-					0 as block_completion_count
-				FROM {self.edxapp_database}.certificates_generatedcertificate
-				GROUP BY course_id, date
-			""")
-			create_index_course_id_date('COURSE_RUN_BY_DATE_CERTIFICATES_GENERATEDCERTIFICATE')
-			self._sleep_if_need()
-
-			self._create_tmp_table('COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_COUNT', f"""
-				SELECT 
-					course_key as course_id,
-					date_format(cbc.created, "%Y-%m-%d") as date,
-					0 as enrollments_count,
-					0 as passed,
-					0 AS certificates_count,
-					COUNT(1) as block_completion_count
-				FROM {self.edxapp_database}.completion_blockcompletion cbc
-				GROUP BY course_key, date
-			""")
-			create_index_course_id_date('COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_COUNT')
-			self._sleep_if_need()
-
-		return self._create_and_return_table('DATA_COURSE_RUN_BY_DATE', f"""
+		return self._create_and_return_table(f"""
 			SELECT 
 				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(course_id, '+', -2), '+', 1) as course_code,
@@ -372,20 +293,53 @@ class Reports:
 				( SELECT co.social_sharing_url from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as course_marketing_url,
 				( SELECT co.self_paced from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as self_paced,
 				( SELECT co.invitation_only from {self.edxapp_database}.course_overviews_courseoverview co where co.id = t.course_id) as invitation_only,
-				SUM(enrollments_count) as enrollments_count, 
+				SUM(enrollments_count) as enrollments_count,
 				SUM(passed) as passed,
 				SUM(certificates_count) as certificates_count,
 				SUM(block_completion_count) as block_completion_count,
 				(select id from {self.edxapp_database}.course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = course_id as course_run_is_first_edition
 			FROM (
 				(
-					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_STUDENT_COURSEENROLLMENT
+					SELECT
+						course_id,
+						DATE_FORMAT(sce.created, "%Y-%m-%d") date,
+						count(1) as enrollments_count,
+						0 as passed,
+						0 as certificates_count,
+						0 as block_completion_count
+					FROM {self.edxapp_database}.student_courseenrollment sce
+					GROUP BY course_id, date
 				) UNION (
-					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_GRADES_PERSISTENTCOURSEGRADE
+					SELECT
+						course_id,
+						DATE_FORMAT(gpg.passed_timestamp, "%Y-%m-%d") AS date,
+						0 as enrollments_count,
+						count(1) as passed,
+						0 as certificates_count,
+						0 as block_completion_count
+					FROM {self.edxapp_database}.grades_persistentcoursegrade gpg
+					WHERE gpg.passed_timestamp is not null
+					GROUP BY course_id, date
 				) UNION (
-					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_CERTIFICATES_GENERATEDCERTIFICATE
+					SELECT
+						course_id,
+						DATE_FORMAT(created_date, "%Y-%m-%d") AS date,
+						0 as enrollments_count,
+						0 as passed,
+						count(1) AS certificates_count,
+						0 as block_completion_count
+					FROM {self.edxapp_database}.certificates_generatedcertificate
+					GROUP BY course_id, date
 				) UNION (
-					SELECT * FROM {self.output_database}.TMP_COURSE_RUN_BY_DATE_COMPLETION_BLOCKCOMPLETION_COUNT
+					SELECT
+						course_key as course_id,
+						date_format(cbc.created, "%Y-%m-%d") as date,
+						0 as enrollments_count,
+						0 as passed,
+						0 AS certificates_count,
+						COUNT(1) as block_completion_count
+					FROM {self.edxapp_database}.completion_blockcompletion cbc
+					GROUP BY course_key, date
 				)
 			) as t
 			GROUP BY course_id, date
@@ -396,7 +350,7 @@ class Reports:
 		"""
 		Enrollment data with student information
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_WITH_PROFILE_INFO', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -427,7 +381,7 @@ class Reports:
 		"""
 		Enrollment data with year of birth
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_YEAR_OF_BIRTH', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -445,7 +399,7 @@ class Reports:
 		"""
 		Enrollment data with year of birth
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_GENDER', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -463,7 +417,7 @@ class Reports:
 		"""
 		Enrollment data with year of birth
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_LEVEL_OF_EDUCATION', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -481,7 +435,7 @@ class Reports:
 		"""
 		Enrollment data with year of birth
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_COUNTRY', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -500,7 +454,7 @@ class Reports:
 		"""
 		Enrollment data with employment situation
 		"""
-		return self._create_and_return_table('DATA_ENROLLMENTS_EMPLOYMENT_SITUATION', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, ':', -1), '+', 1) as org_code,
 				SUBSTRING_INDEX(SUBSTRING_INDEX(sce.course_id, '+', -2), '+', 1) as course_code,
@@ -515,7 +469,7 @@ class Reports:
 		""")
 
 	def users(self):
-		return self._create_and_return_table('DATA_USERS', f"""
+		return self._create_and_return_table(f"""
 			SELECT
 				date_format(date_joined, "%Y-%m-%d") as register_date,
 				au.is_active,
@@ -532,7 +486,7 @@ class Reports:
 		""")
 
 	def registered_users_by_day(self):
-		return self._create_and_return_table('DATA_REGISTERED_USERS_BY_DAY', f"""
+		return self._create_and_return_table(f"""
 			SELECT register_date, sum(active) as total_active, sum(total) as total, sum(enrollment_count) as enrollment_count
 			FROM 
 			(
@@ -574,7 +528,7 @@ class Reports:
 		"""
 		This gives the number of users that have learn by day
 		"""
-		return self._create_and_return_table('DATA_DISTINCT_USERS_BY_DAY', f"""
+		return self._create_and_return_table(f"""
 	 		SELECT DATE_FORMAT(created, "%Y-%m-%d") date, COUNT(distinct user_id) as users
 			FROM {self.edxapp_database}.completion_blockcompletion cbc
 			GROUP BY date
@@ -584,7 +538,7 @@ class Reports:
 		"""
 		Number of users that have learn on the platform by month
 		"""
-		return self._create_and_return_table('DATA_DISTINCT_USERS_BY_MONTH', f"""
+		return self._create_and_return_table(f"""
 	 		SELECT DATE_FORMAT(created, "%Y-%m") date, COUNT(distinct user_id) as users
 			FROM {self.edxapp_database}.completion_blockcompletion cbc
 			GROUP BY date

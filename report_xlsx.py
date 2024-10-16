@@ -30,8 +30,7 @@ def xlsx_worksheet(data, worksheet):
 		row += 1
 
 
-def xlsx_export_queries(config : configparser.ConfigParser, report:Reports):
-
+def export_to_xlsx(config : configparser.ConfigParser, report:Reports):
 	file_name : str = config.get('xlsx', 'file', fallback='report.xlsx')
 	default_date_format : str = config.get('xlsx', 'default_date_format', fallback='yyyy-mm-dd')
 	workbook = xlsxwriter.Workbook(file_name, {'default_date_format': default_date_format})
@@ -41,18 +40,8 @@ def xlsx_export_queries(config : configparser.ConfigParser, report:Reports):
 	for sheet_key in sheets_to_export_keys:
 		sheets_results = report.sheets_data([sheet_key])
 		for sheet_title, sheet_result in sheets_results:
-			worksheet = workbook.add_worksheet(sheet_title)
+			# xlsx supports max of 31 characters on sheet title
+			worksheet = workbook.add_worksheet(sheet_title[:31])
 			xlsx_worksheet(sheet_result, worksheet)
 	
 	workbook.close()
-
-
-def main():
-	config = configparser.ConfigParser()
-	config.read('config.ini')
-	nau_reports = Reports(False, config)
-	xlsx_export_queries(config, nau_reports)
-
-
-if __name__ == "__main__":
-	main()
