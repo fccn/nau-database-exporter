@@ -3,4 +3,4 @@
 __pycache__/
 venv/
 *.xlsx
-config.ini
+config.ini*

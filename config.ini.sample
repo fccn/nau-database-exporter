@@ -7,7 +7,7 @@ password = password
 database = edxapp
 
 [sheets]
-# progress = True
+progress = True
 
 [google_service_account]
 type = service_account
@@ -40,14 +40,6 @@ distinct_users_by_day = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 distinct_users_by_month = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 [xlsx]
-# File name
-file = nau_reports.xlsx
-default_date_format = yyyy-mm-dd
-export = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,users,distinct_users_by_day,distinct_users_by_month,final_summary
-
-# Configuration when the `update_data.py` is run.
-[data]
-# Configure which data should be synchronized / updated
-synchronize = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,enrollments_year_of_birth,enrollments_gender,enrollments_level_of_education,enrollments_country,enrollments_employment_situation,users,registered_users_by_day,distinct_users_by_day,distinct_users_by_month
-# number of seconds between each query /update so the database can breathe and we don't too much stress.
-seconds_between_updates=120
+; file = nau_reports.xlsx
+; default_date_format = yyyy-mm-dd
+; export = organizations,course_runs,course_run_by_date,enrollments_with_profile_info,enrollments_year_of_birth,enrollments_gender,enrollments_level_of_education,enrollments_country,enrollments_employment_situation,users,registered_users_by_day,distinct_users_by_day,distinct_users_by_month
