@@ -23,6 +23,9 @@ identification numbers, like user id, emails or similar data; so it's GDPR compl
 
 ### Activate virtual environment and install its dependencies
 
+Use python `3.11`.
+
+
 ```bash
 virtualenv venv --python=python3
 source venv/bin/activate
