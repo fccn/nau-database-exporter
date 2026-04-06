@@ -28,20 +28,27 @@ def transform_values(values : array):
 		new_values.append(new_value)
 	return new_values
 
-def write_data(data: dict, worksheet: Worksheet):
+def write_data(data: dict, worksheet: Worksheet, batch_size: int = 5000):
 	"""
 	Write the result of the SQL query to a Google Sheet worksheet
 	"""
 	alter_data = []
 
 	# append header
-	alter_data.append(transform_values(data[0].keys()))
-	
+	alter_data.append(list(transform_values(data[0].keys())))
+
 	for line in data:
 		new_line = transform_values(line.values())
 		alter_data.append(new_line)
-	
-	worksheet.update(alter_data, value_input_option=ValueInputOption.user_entered)
+
+	num_rows = len(alter_data)
+	num_cols = len(alter_data[0]) if alter_data else 1
+	worksheet.clear()
+	worksheet.resize(rows=num_rows, cols=num_cols)
+	for i in range(0, num_rows, batch_size):
+		chunk = alter_data[i:i + batch_size]
+		start_row = i + 1
+		worksheet.update(f'A{start_row}', chunk, value_input_option=ValueInputOption.user_entered)
 
 
 def export_queries_to_google(config : configparser.ConfigParser, report:Reports):
