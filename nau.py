@@ -256,7 +256,8 @@ class Reports:
 			    (select AVG(grade) from {self.edxapp_database}.certificates_generatedcertificate cgc WHERE cgc.course_id = coc.id) AS average_grade,
 				(select count(1) from {self.edxapp_database}.course_overviews_courseoverview coc2 where course_code=SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1)) as course_runs_count,
 				(select id from {self.edxapp_database}.course_overviews_courseoverview coc2 where course_code = SUBSTRING_INDEX(SUBSTRING_INDEX(coc2.id, '+', -2), '+', 1) order by created asc limit 1) = id as course_run_is_first_edition,
-				(select count(1) from {self.edxapp_database}.grades_persistentcoursegrade gpcg where coc.id = gpcg.course_id and gpcg.passed_timestamp is not null) as passed
+				(select count(1) from {self.edxapp_database}.grades_persistentcoursegrade gpcg where coc.id = gpcg.course_id and gpcg.passed_timestamp is not null) as passed,
+				(select count(1) from {self.edxapp_database}.nau_openedx_extensions_naucoursefilter noen WHERE noen.course_id = coc.id) AS filters_count
 			FROM {self.edxapp_database}.course_overviews_courseoverview coc
 			ORDER BY created ASC
 		""")
